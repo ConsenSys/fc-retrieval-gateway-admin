@@ -93,13 +93,26 @@ func SendKeyToGateway(privatekey *fcrcrypto.KeyPair) error {
 	// Make a request message
 	settingsBuilder := CreateSettings()
 	conf := settingsBuilder.Build()
-	retrievalprivatekey := conf.RetrievalPrivateKey()
+	retrievalprivatekey := (*conf).RetrievalPrivateKey()
 	retrievalprivatekeystr := retrievalprivatekey.EncodePrivateKey()
 	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(privatekey, keyversion)
 	if err != nil {
 		logging.Error("Internal error in encoding AdminAcceptKeyChallenge message.")
 		return nil
 	}
+
+	// TODO DHW
+	if request.SignMessage(func(msg interface{}) (string, error) {
+		return fcrcrypto.SignMessage(c.settings.RetrievalPrivateKey(), c.settings.RetrievalPrivateKeyVer(), msg)
+	}) != nil {
+		logging.Error("Error signing message for Client Establishment Request: %+v", err)
+		return false, err
+	}
+
+	res := c.gatewayCall(request).Get("result").MustString()
+	// TODO interpret the response.
+	logging.Info("Response from server: %s", res)
+	// END TODO DHW
 
 	// Sign the request
 	sig, err := fcrcrypto.SignMessage(retrievalprivatekeystr, conf.RetrievalPrivateKeyVersion, request)
