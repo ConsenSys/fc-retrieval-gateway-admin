@@ -16,8 +16,14 @@ package fcrgatewayadmin
  */
 
 import (
+	"container/list"
+
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/control"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/settings"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrmessages"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrtcpcomms"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/logging"
 	log "github.com/ConsenSys/fc-retrieval-gateway/pkg/logging"
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
 )
@@ -60,12 +66,84 @@ func (c *FilecoinRetrievalGatewayAdminClient) startUp(conf Settings) {
 	c.gatewayManager = control.GetGatewayManager(*clientSettings)
 }
 
-// SetClientReputation requests a Gateway to set a client's reputation to a specified value.
-func (c *FilecoinRetrievalGatewayAdminClient) SetClientReputation(clientID *nodeid.NodeID, rep int64) bool {
-	log.Info("Filecoin Retrieval Gateway Admin Client: SetClientReputation(clientID: %s, reputation: %d", clientID, rep)
-	// TODO
-	log.Info("Filecoin Retrieval Gateway Admin Client: SetClientReputation(clientID: %s, reputation: %d) failed to set reputation.", clientID, rep)
+// CreateKey creates a private key for a Gateway.
+func CreateKey() (*fcrcrypto.KeyPair, *fcrcrypto.KeyVersion, error) {
+	log.Info("Filecoin Retrieval Gateway Admin Client: RequestKeyCreation()")
+
+	gatewayPrivateKey, err := fcrcrypto.GenerateRetrievalV1KeyPair()
+	if err != nil {
+		logging.Error("Error creating Gateway Private Key: %s", err)
+		return nil, nil, err
+	}
+
+	keyversion := fcrcrypto.InitialKeyVersion()
+
+	return gatewayPrivateKey, keyversion, nil
+}
+
+// SendKeyToGateway sends a private key to a Gateway along with a key version number.
+func SendKeyToGateway(privatekey *fcrcrypto.KeyPair) error {
+	log.Info("Filecoin Retrieval Gateway Admin Client: SendKeyToGateway()")
+	// Get next key version
+	var keyversion *fcrcrypto.KeyVersion
+	keyversion = fcrcrypto.InitialKeyVersion()
+
+	// TODO DHW: Send key to gateway
+
+	// Make a request message
+	settingsBuilder := CreateSettings()
+	conf := settingsBuilder.Build()
+	retrievalprivatekey := conf.RetrievalPrivateKey()
+	retrievalprivatekeystr := retrievalprivatekey.EncodePrivateKey()
+	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(privatekey, keyversion)
+	if err != nil {
+		logging.Error("Internal error in encoding AdminAcceptKeyChallenge message.")
+		return nil
+	}
+
+	// Sign the request
+	sig, err := fcrcrypto.SignMessage(retrievalprivatekeystr, conf.RetrievalPrivateKeyVersion, request)
+	if err != nil {
+		// Ignored.
+		logging.Error("Internal error in signing message.")
+		return nil
+	}
+	// TODO DHW: How to use the sig? Is it appended to the request message?
+
+	// TODO DHW
+	// Get conn for the right gateway
+	err := fcrtcpcomms.SendTCPMessage(conn, request, conf.DefaultTCPInactivityTimeout)
+
+	if err != nil {
+		logging.Error("Error sending private key to Gateway: %s", err)
+		return err
+	}
+	return nil
+}
+
+// InitialiseClientReputation requests a Gateway to initialise a client's reputation to the default value.
+func InitialiseClientReputation(clientID *nodeid.NodeID) bool {
+	log.Info("Filecoin Retrieval Gateway Admin Client: InitialiseClientReputation(clientID: %s", clientID)
+	// TODO DHW
+	log.Info("InitialiseClientReputation(clientID: %s) failed to initialise reputation.", clientID)
 	return false
+}
+
+// SetClientReputation requests a Gateway to set a client's reputation to a specified value.
+func SetClientReputation(clientID *nodeid.NodeID, rep int64) bool {
+	log.Info("Filecoin Retrieval Gateway Admin Client: SetClientReputation(clientID: %s, reputation: %d", clientID, rep)
+	// TODO DHW
+	log.Info("SetClientReputation(clientID: %s, reputation: %d) failed to set reputation.", clientID, rep)
+	return false
+}
+
+// GetCIDOffersList requests a Gateway's current list of CID Offers.
+func GetCIDOffersList() *list.List {
+	log.Info("Filecoin Retrieval Gateway Admin Client: GetCIDOffersList()")
+	// TODO
+	log.Info("GetCIDOffersList() failed to find any CID Offers.")
+	emptyList := list.New()
+	return emptyList
 }
 
 // Shutdown releases all resources used by the library
