@@ -93,7 +93,7 @@ func SendKeyToGateway(privatekey *fcrcrypto.KeyPair) error {
 	// Make a request message
 	settingsBuilder := CreateSettings()
 	conf := settingsBuilder.Build()
-	retrievalprivatekey := conf.RetrievalPrivateKey()
+	retrievalprivatekey := (*conf).RetrievalPrivateKey()
 	retrievalprivatekeystr := retrievalprivatekey.EncodePrivateKey()
 	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(privatekey, keyversion)
 	if err != nil {
