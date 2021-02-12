@@ -82,55 +82,59 @@ func CreateKey() (*fcrcrypto.KeyPair, *fcrcrypto.KeyVersion, error) {
 }
 
 // SendKeyToGateway sends a private key to a Gateway along with a key version number.
-func SendKeyToGateway(privatekey *fcrcrypto.KeyPair) error {
+func SendKeyToGateway(gateway string, gatewayprivatekey *fcrcrypto.KeyPair) error {
 	log.Info("Filecoin Retrieval Gateway Admin Client: SendKeyToGateway()")
-	// Get next key version
-	var keyversion *fcrcrypto.KeyVersion
-	keyversion = fcrcrypto.InitialKeyVersion()
 
-	// TODO DHW: Send key to gateway
+	// Get gateway key version
+	var gatewaykeyversion *fcrcrypto.KeyVersion
+	gatewaykeyversion = fcrcrypto.InitialKeyVersion() // TODO: Shouldn't this be the /current/ version??
+	gatewaykeyversionuint := gatewaykeyversion.EncodeKeyVersion()
+	// Get encoded version of the gateway's private key
+	gatewayprivatekeystr := gatewayprivatekey.EncodePrivateKey()
 
 	// Make a request message
 	settingsBuilder := CreateSettings()
 	conf := settingsBuilder.Build()
-	retrievalprivatekey := (*conf).RetrievalPrivateKey()
-	retrievalprivatekeystr := retrievalprivatekey.EncodePrivateKey()
-	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(privatekey, keyversion)
+	clientprivatekey := (*conf).RetrievalPrivateKey()
+	clientprivatekeyversion := fcrcrypto.InitialKeyVersion() // TODO: Shouldn't this be the /current/ version??
+	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(gatewayprivatekeystr, gatewaykeyversionuint)
 	if err != nil {
 		logging.Error("Internal error in encoding AdminAcceptKeyChallenge message.")
 		return nil
 	}
 
-	// TODO DHW
-	if request.SignMessage(func(msg interface{}) (string, error) {
-		return fcrcrypto.SignMessage(c.settings.RetrievalPrivateKey(), c.settings.RetrievalPrivateKeyVer(), msg)
-	}) != nil {
-		logging.Error("Error signing message for Client Establishment Request: %+v", err)
-		return false, err
-	}
-
-	res := c.gatewayCall(request).Get("result").MustString()
-	// TODO interpret the response.
-	logging.Info("Response from server: %s", res)
-	// END TODO DHW
-
 	// Sign the request
-	sig, err := fcrcrypto.SignMessage(retrievalprivatekeystr, conf.RetrievalPrivateKeyVersion, request)
-	if err != nil {
-		// Ignored.
-		logging.Error("Internal error in signing message.")
-		return nil
-	}
-	// TODO DHW: How to use the sig? Is it appended to the request message?
+	if request.SignMessage(func(msg interface{}) (string, error) {
+		return fcrcrypto.SignMessage(clientprivatekey, clientprivatekeyversion, msg)
 
-	// TODO DHW
+	}) != nil {
+		logging.Error("Error signing message for sending private key to gateway: %+v", err)
+		return err
+	}
+
+	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
+	conxPool := fcrtcpcomms.NewCommunicationPool()
+
+	// - get the public key of the gateway and its NodeID
+	gatewaypublickey, err := gatewayprivatekey.EncodePublicKey()
+	if err != nil {
+		logging.Error("Error encoding gateway's public key: %s", err)
+		return err
+	}
+	gatewaynodeid := nodeid.NewNodeIDFromString(gatewaypublickey)
+
+	log.Info("Sending message to gateway: %v, message: %v", gatewaynodeid.ToString(), request.GetMessageBody())
+
 	// Get conn for the right gateway
-	err := fcrtcpcomms.SendTCPMessage(conn, request, conf.DefaultTCPInactivityTimeout)
+	err = fcrtcpcomms.SendTCPMessage(conn, request, DefaultTCPInactivityTimeout)
 
 	if err != nil {
 		logging.Error("Error sending private key to Gateway: %s", err)
 		return err
 	}
+
+	// TODO: How to receive response from gateway?
+
 	return nil
 }
 
