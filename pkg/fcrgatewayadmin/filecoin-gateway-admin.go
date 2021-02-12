@@ -115,17 +115,32 @@ func SendKeyToGateway(gateway string, gatewayprivatekey *fcrcrypto.KeyPair) erro
 	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
 	conxPool := fcrtcpcomms.NewCommunicationPool()
 
+	// TODO: Register the gateway with the connection pool.
+
 	// - get the public key of the gateway and its NodeID
 	gatewaypublickey, err := gatewayprivatekey.EncodePublicKey()
 	if err != nil {
 		logging.Error("Error encoding gateway's public key: %s", err)
 		return err
 	}
-	gatewaynodeid := nodeid.NewNodeIDFromString(gatewaypublickey)
+	// Get the gateway's NodeID
+	gatewaynodeid, err := nodeid.NewNodeIDFromString(gatewaypublickey)
+	if err != nil {
+		logging.Error("Error getting gateway's NodeID: %s", err)
+		return err
+	}
+
+	// TODO: Persistence the gateway's keys and NodeID locally
 
 	log.Info("Sending message to gateway: %v, message: %v", gatewaynodeid.ToString(), request.GetMessageBody())
 
 	// Get conn for the right gateway
+	channel, err := conxPool.GetConnForRequestingNode(gatewaynodeid)
+	conn := channel.Conn
+	if err != nil {
+		logging.Error("Error getting a connection to gateway %v: %s", gatewaynodeid.ToString(), err)
+		return err
+	}
 	err = fcrtcpcomms.SendTCPMessage(conn, request, DefaultTCPInactivityTimeout)
 
 	if err != nil {
@@ -133,7 +148,7 @@ func SendKeyToGateway(gateway string, gatewayprivatekey *fcrcrypto.KeyPair) erro
 		return err
 	}
 
-	// TODO: How to receive response from gateway?
+	// TODO: Receive response from gateway?
 
 	return nil
 }
