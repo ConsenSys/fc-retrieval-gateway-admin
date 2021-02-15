@@ -55,8 +55,7 @@ func (f *BuilderImpl) SetGatewayAdminPrivateKey(rPkey *fcrcrypto.KeyPair, ver *f
 
 // Build creates a settings object and initialises the logging system.
 func (f *BuilderImpl) Build() *ClientGatewayAdminSettings {
-	conf := config.NewConfig()
-	log.Init(conf)
+	log.Init1(f.logLevel, f.logTarget)
 
 	g := ClientGatewayAdminSettings{}
 	g.establishmentTTL = f.establishmentTTL
