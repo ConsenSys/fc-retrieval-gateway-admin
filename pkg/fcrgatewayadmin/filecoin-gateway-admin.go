@@ -58,7 +58,7 @@ func CreateKey() (*fcrcrypto.KeyPair, error) {
 
 // InitializeGateway sends a private key to a Gateway along with a key version number.
 func (c *FilecoinRetrievalGatewayAdminClient) InitializeGateway(gatewayDomain string, gatewayPrivateKey *fcrcrypto.KeyPair) error {
-	log.Info("Filecoin Retrieval Gateway Admin Client: SendKeyToGateway()")
+	log.Info("Filecoin Retrieval Gateway Admin Client: InitializeGateway()")
 	c.gatewayManager.InitializeGateway(gatewayDomain, gatewayPrivateKey)
 
 	return nil
