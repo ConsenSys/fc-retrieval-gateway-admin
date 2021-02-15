@@ -21,9 +21,6 @@ import (
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/control"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/settings"
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrmessages"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrtcpcomms"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/logging"
 	log "github.com/ConsenSys/fc-retrieval-gateway/pkg/logging"
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
 )
@@ -35,35 +32,15 @@ type FilecoinRetrievalGatewayAdminClient struct {
 	// TODO have a list of gateway objects of all the current gateways being interacted with
 }
 
-var singleInstance *FilecoinRetrievalGatewayAdminClient
-var initialised = false
 
-// InitFilecoinRetrievalGatewayAdminClient initialise the Filecoin Retreival Client library
-func InitFilecoinRetrievalGatewayAdminClient(settings Settings) *FilecoinRetrievalGatewayAdminClient {
-	if initialised {
-		log.ErrorAndPanic("Attempt to init Filecoin Retrieval Gateway Admin Client a second time")
-	}
+// NewFilecoinRetrievalGatewayAdminClient initialise the Filecoin Retreival Client library
+func NewFilecoinRetrievalGatewayAdminClient(conf Settings) *FilecoinRetrievalGatewayAdminClient {
 	var c = FilecoinRetrievalGatewayAdminClient{}
-	c.startUp(settings)
-	singleInstance = &c
-	initialised = true
-	return singleInstance
-
-}
-
-// GetFilecoinRetrievalGatewayAdminClient creates a Filecoin Retrieval Gateway Admin Client
-func GetFilecoinRetrievalGatewayAdminClient() *FilecoinRetrievalGatewayAdminClient {
-	if !initialised {
-		log.ErrorAndPanic("Filecoin Retrieval Gateway Admin Client not initialised")
-	}
-
-	return singleInstance
-}
-
-func (c *FilecoinRetrievalGatewayAdminClient) startUp(conf Settings) {
 	log.Info("Filecoin Retrieval Gateway Admin Client started")
 	clientSettings := conf.(*settings.ClientGatewayAdminSettings)
-	c.gatewayManager = control.GetGatewayManager(*clientSettings)
+	c.gatewayManager = control.NewGatewayManager(*clientSettings)
+	return &c
+
 }
 
 // CreateKey creates a private key for a Gateway.
@@ -72,7 +49,7 @@ func CreateKey() (*fcrcrypto.KeyPair, *fcrcrypto.KeyVersion, error) {
 
 	gatewayPrivateKey, err := fcrcrypto.GenerateRetrievalV1KeyPair()
 	if err != nil {
-		logging.Error("Error creating Gateway Private Key: %s", err)
+		log.Error("Error creating Gateway Private Key: %s", err)
 		return nil, nil, err
 	}
 
@@ -81,74 +58,10 @@ func CreateKey() (*fcrcrypto.KeyPair, *fcrcrypto.KeyVersion, error) {
 	return gatewayPrivateKey, keyversion, nil
 }
 
-// SendKeyToGateway sends a private key to a Gateway along with a key version number.
-func SendKeyToGateway(gateway string, gatewayprivatekey *fcrcrypto.KeyPair) error {
+// InitializeGateway sends a private key to a Gateway along with a key version number.
+func (c *FilecoinRetrievalGatewayAdminClient) InitializeGateway(gatewayDomain string, gatewayPrivateKey *fcrcrypto.KeyPair) error {
 	log.Info("Filecoin Retrieval Gateway Admin Client: SendKeyToGateway()")
-
-	// Get gateway key version
-	var gatewaykeyversion *fcrcrypto.KeyVersion
-	gatewaykeyversion = fcrcrypto.InitialKeyVersion() // TODO: Shouldn't this be the /current/ version??
-	gatewaykeyversionuint := gatewaykeyversion.EncodeKeyVersion()
-	// Get encoded version of the gateway's private key
-	gatewayprivatekeystr := gatewayprivatekey.EncodePrivateKey()
-
-	// Make a request message
-	settingsBuilder := CreateSettings()
-	conf := settingsBuilder.Build()
-	clientprivatekey := (*conf).RetrievalPrivateKey()
-	clientprivatekeyversion := fcrcrypto.InitialKeyVersion() // TODO: Shouldn't this be the /current/ version??
-	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(gatewayprivatekeystr, gatewaykeyversionuint)
-	if err != nil {
-		logging.Error("Internal error in encoding AdminAcceptKeyChallenge message.")
-		return nil
-	}
-
-	// Sign the request
-	if request.SignMessage(func(msg interface{}) (string, error) {
-		return fcrcrypto.SignMessage(clientprivatekey, clientprivatekeyversion, msg)
-
-	}) != nil {
-		logging.Error("Error signing message for sending private key to gateway: %+v", err)
-		return err
-	}
-
-	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
-	conxPool := fcrtcpcomms.NewCommunicationPool()
-
-	// TODO: Register the gateway with the connection pool.
-
-	// - get the public key of the gateway and its NodeID
-	gatewaypublickey, err := gatewayprivatekey.EncodePublicKey()
-	if err != nil {
-		logging.Error("Error encoding gateway's public key: %s", err)
-		return err
-	}
-	// Get the gateway's NodeID
-	gatewaynodeid, err := nodeid.NewNodeIDFromString(gatewaypublickey)
-	if err != nil {
-		logging.Error("Error getting gateway's NodeID: %s", err)
-		return err
-	}
-
-	// TODO: Persistence the gateway's keys and NodeID locally
-
-	log.Info("Sending message to gateway: %v, message: %v", gatewaynodeid.ToString(), request.GetMessageBody())
-
-	// Get conn for the right gateway
-	channel, err := conxPool.GetConnForRequestingNode(gatewaynodeid)
-	conn := channel.Conn
-	if err != nil {
-		logging.Error("Error getting a connection to gateway %v: %s", gatewaynodeid.ToString(), err)
-		return err
-	}
-	err = fcrtcpcomms.SendTCPMessage(conn, request, DefaultTCPInactivityTimeout)
-
-	if err != nil {
-		logging.Error("Error sending private key to Gateway: %s", err)
-		return err
-	}
-
-	// TODO: Receive response from gateway?
+	c.gatewayManager.InitializeGateway(gatewayDomain, gatewayPrivateKey)
 
 	return nil
 }

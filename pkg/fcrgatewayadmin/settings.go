@@ -5,19 +5,12 @@ package fcrgatewayadmin
 // Filecoin Retrieval Client Settings
 
 import (
-	"time"
-
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
 
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/settings"
 )
 
-// DefaultGatewayBindAdminAPI is the default gateway admin port
-const DefaultGatewayBindAdminAPI = "9013"
-
-// DefaultTCPInactivityTimeout is the default TCP timeout
-const DefaultTCPInactivityTimeout = 100 * time.Millisecond
 
 // SettingsBuilder holds the library configuration
 type SettingsBuilder interface {

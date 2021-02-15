@@ -16,8 +16,12 @@ package control
  */
 
 import (
-	"fmt"
 	"sync"
+
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrmessages"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrtcpcomms"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
 
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/contracts"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/gatewayapi"
@@ -29,7 +33,7 @@ import (
 type GatewayManager struct {
 	settings                    settings.ClientGatewayAdminSettings
 	gatewayRegistrationContract *contracts.GatewayRegistrationContract
-	gateways                    []ActiveGateway
+	gateway                     ActiveGateway
 	gatewaysLock                sync.RWMutex
 }
 
@@ -39,70 +43,90 @@ type ActiveGateway struct {
 	comms *gatewayapi.Comms
 }
 
-// // GatewayManagerSettings is used to communicate the settings to be used by the
-// // Gateway Manager.
-// type GatewayManagerSettings struct {
-// 	MaxEstablishmentTTL int64
-// 	NodeID *nodeid.NodeID
-// }
 
-var doOnce sync.Once
-var singleInstance *GatewayManager
-
-// GetGatewayManager returns the single instance of the gateway manager.
+// NewGatewayManager returns the single instance of the gateway manager.
 // The settings parameter must be used with the first call to this function.
 // After that, the settings parameter is ignored.
-func GetGatewayManager(settings ...settings.ClientGatewayAdminSettings) *GatewayManager {
-	doOnce.Do(func() {
-		if len(settings) != 1 {
-			log.ErrorAndPanic("Unexpected number of parameter passed to first call of GetGatewayManager")
-		}
-		startGatewayManager(settings[0])
-	})
-	return singleInstance
-}
-
-func startGatewayManager(settings settings.ClientGatewayAdminSettings) {
+func NewGatewayManager(conf settings.ClientGatewayAdminSettings) *GatewayManager {
 	g := GatewayManager{}
-	g.settings = settings
+	g.settings = conf
 	g.gatewayRegistrationContract = contracts.GetGatewayRegistrationContract()
 
-	singleInstance = &g
-
-	//	errChan := make(chan error, 1)
-	//	go g.gatewayManagerRunner()
-	g.gatewayManagerRunner()
 
 	// TODO what should be done with error that is returned possibly in the future?
 	// TODO would it be better just to have gatewayManagerRunner panic after emitting a log?
+	return &g
 }
 
-func (g *GatewayManager) gatewayManagerRunner() {
-	log.Info("Gateway Manager: Management thread started")
 
-	// Call this once each hour or maybe day.
-	g.gatewayRegistrationContract.FetchUpdatedInformationFromContract()
 
-	// TODO this loop is where the managing of gateways that the client is using
-	// happens.
+// InitializeGateway initialise a new gateway
+func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayprivatekey *fcrcrypto.KeyPair) error {
+// TODO check whether gateway not initialized.
+// TODO check whether contract indicates initialised
 
-	// TODO given we are using dummy data, just grab the gateway information once.
-	gatewayInfo := g.gatewayRegistrationContract.GetGateways(10)
-	numGateways := len(gatewayInfo)
-	numGatewaysStr := fmt.Sprint(numGateways)
-	log.Info("Gateway Manager: GetGateways returned " + numGatewaysStr + "gateways")
-	for _, info := range gatewayInfo {
-		host := info.Hostname
-		comms, err := gatewayapi.NewGatewayAPIComms(host, g.settings.ClientID())
-		if err != nil {
-			log.ErrorAndPanic("Could not establish communication with the gateway")
-		}
+	// Get gateway key version
+	var gatewaykeyversion *fcrcrypto.KeyVersion
+	gatewaykeyversion = fcrcrypto.InitialKeyVersion() 
+	gatewaykeyversionuint := gatewaykeyversion.EncodeKeyVersion()
+	// Get encoded version of the gateway's private key
+	gatewayprivatekeystr := gatewayprivatekey.EncodePrivateKey()
 
-		activeGateway := ActiveGateway{info, comms}
-		g.gateways = append(g.gateways, activeGateway)
+	// Make a request message
+	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(gatewayprivatekeystr, gatewaykeyversionuint)
+	if err != nil {
+		log.Error("Internal error in encoding AdminAcceptKeyChallenge message.")
+		return nil
 	}
 
-	log.Info("Gateway Manager using %d gateways", len(g.gateways))
+	// Sign the request
+	if request.SignMessage(func(msg interface{}) (string, error) {
+		return fcrcrypto.SignMessage(g.settings.RetrievalPrivateKey(), g.settings.RetrievalPrivateKeyVer(), msg)
+
+	}) != nil {
+		log.Error("Error signing message for sending private key to gateway: %+v", err)
+		return err
+	}
+
+	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
+	conxPool := fcrtcpcomms.NewCommunicationPool()
+
+	// TODO: Register the gateway with the connection pool.
+
+	// - get the public key of the gateway and its NodeID
+	gatewaypublickey, err := gatewayprivatekey.EncodePublicKey()
+	if err != nil {
+		log.Error("Error encoding gateway's public key: %s", err)
+		return err
+	}
+	// Get the gateway's NodeID
+	gatewaynodeid, err := nodeid.NewNodeIDFromString(gatewaypublickey)
+	if err != nil {
+		log.Error("Error getting gateway's NodeID: %s", err)
+		return err
+	}
+
+	// TODO: Persistence the gateway's keys and NodeID locally
+
+	log.Info("Sending message to gateway: %v, message: %v", gatewaynodeid.ToString(), request.GetMessageBody())
+
+	// Get conn for the right gateway
+	channel, err := conxPool.GetConnForRequestingNode(gatewaynodeid)
+	conn := channel.Conn
+	if err != nil {
+		log.Error("Error getting a connection to gateway %v: %s", gatewaynodeid.ToString(), err)
+		return err
+	}
+	err = fcrtcpcomms.SendTCPMessage(conn, request, settings.DefaultTCPInactivityTimeout)
+
+	if err != nil {
+		log.Error("Error sending private key to Gateway: %s", err)
+		return err
+	}
+
+	// TODO: Receive response from gateway?
+
+	return nil
 }
 
 // BlockGateway adds a host to disallowed list of gateways
