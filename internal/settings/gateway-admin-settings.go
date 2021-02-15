@@ -6,18 +6,16 @@ package settings
 
 import (
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
 )
 
 // ClientGatewayAdminSettings holds the library configuration
 type ClientGatewayAdminSettings struct {
 	establishmentTTL int64
-	clientID         *nodeid.NodeID
 
 	blockchainPrivateKey *fcrcrypto.KeyPair
 
-	retrievalPrivateKey    *fcrcrypto.KeyPair
-	retrievalPrivateKeyVer *fcrcrypto.KeyVersion
+	gatewayAdminPrivateKey    *fcrcrypto.KeyPair
+	gatewayAdminPrivateKeyVer *fcrcrypto.KeyVersion
 }
 
 // EstablishmentTTL returns the establishmentTTL
@@ -25,22 +23,17 @@ func (c ClientGatewayAdminSettings) EstablishmentTTL() int64 {
 	return c.establishmentTTL
 }
 
-// ClientID returns the ClientID
-func (c ClientGatewayAdminSettings) ClientID() *nodeid.NodeID {
-	return c.clientID
-}
-
 // BlockchainPrivateKey returns the BlockchainPrivateKey
 func (c ClientGatewayAdminSettings) BlockchainPrivateKey() *fcrcrypto.KeyPair {
 	return c.blockchainPrivateKey
 }
 
-// RetrievalPrivateKey returns the RetrievalPrivateKey
-func (c ClientGatewayAdminSettings) RetrievalPrivateKey() *fcrcrypto.KeyPair {
-	return c.retrievalPrivateKey
+// GatewayAdminPrivateKey returns the GatewayAdminPrivateKey
+func (c ClientGatewayAdminSettings) GatewayAdminPrivateKey() *fcrcrypto.KeyPair {
+	return c.gatewayAdminPrivateKey
 }
 
-// RetrievalPrivateKeyVer returns the RetrievalPrivateKeyVer
-func (c ClientGatewayAdminSettings) RetrievalPrivateKeyVer() *fcrcrypto.KeyVersion {
-	return c.retrievalPrivateKeyVer
+// GatewayAdminPrivateKeyVer returns the GatewayAdminKeyVer
+func (c ClientGatewayAdminSettings) GatewayAdminPrivateKeyVer() *fcrcrypto.KeyVersion {
+	return c.gatewayAdminPrivateKeyVer
 }

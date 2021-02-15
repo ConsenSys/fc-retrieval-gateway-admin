@@ -8,7 +8,6 @@ import (
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/config"
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
 	log "github.com/ConsenSys/fc-retrieval-gateway/pkg/logging"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
 )
 
 // BuilderImpl holds the library configuration
@@ -16,12 +15,11 @@ type BuilderImpl struct {
 	logLevel         string
 	logTarget        string
 	establishmentTTL int64
-	clientID         *nodeid.NodeID
 
 	blockchainPrivateKey *fcrcrypto.KeyPair
 
-	retrievalPrivateKey    *fcrcrypto.KeyPair
-	retrievalPrivateKeyVer *fcrcrypto.KeyVersion
+	gatewayAdminPrivateKey    *fcrcrypto.KeyPair
+	gatewayAdminPrivateKeyVer *fcrcrypto.KeyVersion
 }
 
 // CreateSettings creates an object with the default settings.
@@ -49,16 +47,14 @@ func (f *BuilderImpl) SetBlockchainPrivateKey(bcPkey *fcrcrypto.KeyPair) {
 	f.blockchainPrivateKey = bcPkey
 }
 
-// SetRetrievalPrivateKey sets the retrieval private key.
-func (f *BuilderImpl) SetRetrievalPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion) {
-	f.retrievalPrivateKey = rPkey
-	f.retrievalPrivateKeyVer = ver
+// SetGatewayAdminPrivateKey sets the private key used for authenticating to the gateway
+func (f *BuilderImpl) SetGatewayAdminPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion) {
+	f.gatewayAdminPrivateKey = rPkey
+	f.gatewayAdminPrivateKeyVer = ver
 }
 
 // Build creates a settings object and initialises the logging system.
 func (f *BuilderImpl) Build() *ClientGatewayAdminSettings {
-	var err error
-
 	conf := config.NewConfig()
 	log.Init(conf)
 
@@ -70,27 +66,16 @@ func (f *BuilderImpl) Build() *ClientGatewayAdminSettings {
 	}
 	g.blockchainPrivateKey = f.blockchainPrivateKey
 
-	if f.clientID == nil {
-		log.Info("Settings: No Client ID set. Generating random client ID")
-		// TODO replace once NewRandomNodeID becomes available.
-		g.clientID, err = nodeid.NewRandomNodeID()
-		if err != nil {
-			log.ErrorAndPanic("Settings: Error while generating random client ID: " + err.Error())
-		}
-	} else {
-		g.clientID = f.clientID
-	}
-
-	if f.retrievalPrivateKey == nil {
+	if f.gatewayAdminPrivateKey == nil {
 		pKey, err := fcrcrypto.GenerateRetrievalV1KeyPair()
 		if err != nil {
 			log.ErrorAndPanic("Settings: Error while generating random retrieval key pair: %s" + err.Error())
 		}
-		f.retrievalPrivateKey = pKey
-		f.retrievalPrivateKeyVer = fcrcrypto.DecodeKeyVersion(1)
+		f.gatewayAdminPrivateKey = pKey
+		f.gatewayAdminPrivateKeyVer = fcrcrypto.DecodeKeyVersion(1)
 	} else {
-		g.retrievalPrivateKey = f.retrievalPrivateKey
-		g.retrievalPrivateKeyVer = f.retrievalPrivateKeyVer
+		g.gatewayAdminPrivateKey = f.gatewayAdminPrivateKey
+		g.gatewayAdminPrivateKeyVer = f.gatewayAdminPrivateKeyVer
 	}
 
 	return &g

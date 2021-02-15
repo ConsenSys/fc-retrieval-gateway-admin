@@ -81,7 +81,7 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayprivatek
 
 	// Sign the request
 	if request.SignMessage(func(msg interface{}) (string, error) {
-		return fcrcrypto.SignMessage(g.settings.RetrievalPrivateKey(), g.settings.RetrievalPrivateKeyVer(), msg)
+		return fcrcrypto.SignMessage(g.settings.GatewayAdminPrivateKey(), g.settings.GatewayAdminPrivateKeyVer(), msg)
 
 	}) != nil {
 		log.Error("Error signing message for sending private key to gateway: %+v", err)

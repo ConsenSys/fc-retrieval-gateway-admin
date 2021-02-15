@@ -6,7 +6,6 @@ package fcrgatewayadmin
 
 import (
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
 
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/settings"
 )
@@ -23,8 +22,8 @@ type SettingsBuilder interface {
 	// SetBlockchainPrivateKey sets the blockchain private key.
 	SetBlockchainPrivateKey(bcPkey *fcrcrypto.KeyPair)
 
-	// SetRetrievalPrivateKey sets the retrieval private key.
-	SetRetrievalPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion)
+	// SetGatewayAdminPrivateKey sets the retrieval private key.
+	SetGatewayAdminPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion)
 
 	// Build creates a settings object and initialises the logging system.
 	Build() *Settings
@@ -33,12 +32,11 @@ type SettingsBuilder interface {
 // Settings holds the library configuration
 type Settings interface {
 	EstablishmentTTL() int64
-	ClientID() *nodeid.NodeID
 
 	BlockchainPrivateKey() *fcrcrypto.KeyPair
 
-	RetrievalPrivateKey() *fcrcrypto.KeyPair
-	RetrievalPrivateKeyVer() *fcrcrypto.KeyVersion
+    GatewayAdminPrivateKey() *fcrcrypto.KeyPair
+	GatewayAdminPrivateKeyVer() *fcrcrypto.KeyVersion
 }
 
 // CreateSettings loads up default settings
@@ -71,9 +69,9 @@ func (f settingsBuilderImpl) SetBlockchainPrivateKey(bcPkey *fcrcrypto.KeyPair) 
 	f.impl.SetBlockchainPrivateKey(bcPkey)
 }
 
-// SetRetrievalPrivateKey sets the retrieval private key.
-func (f settingsBuilderImpl) SetRetrievalPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion) {
-	f.impl.SetRetrievalPrivateKey(rPkey, ver)
+// SetGatewayAdminPrivateKey sets the retrieval private key.
+func (f settingsBuilderImpl) SetGatewayAdminPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion) {
+	f.impl.SetGatewayAdminPrivateKey(rPkey, ver)
 }
 
 // Build generates the settings.
