@@ -44,18 +44,16 @@ func NewFilecoinRetrievalGatewayAdminClient(conf Settings) *FilecoinRetrievalGat
 }
 
 // CreateKey creates a private key for a Gateway.
-func CreateKey() (*fcrcrypto.KeyPair, *fcrcrypto.KeyVersion, error) {
+func CreateKey() (*fcrcrypto.KeyPair, error) {
 	log.Info("Filecoin Retrieval Gateway Admin Client: RequestKeyCreation()")
 
 	gatewayPrivateKey, err := fcrcrypto.GenerateRetrievalV1KeyPair()
 	if err != nil {
 		log.Error("Error creating Gateway Private Key: %s", err)
-		return nil, nil, err
+		return nil, err
 	}
 
-	keyversion := fcrcrypto.InitialKeyVersion()
-
-	return gatewayPrivateKey, keyversion, nil
+	return gatewayPrivateKey, nil
 }
 
 // InitializeGateway sends a private key to a Gateway along with a key version number.
