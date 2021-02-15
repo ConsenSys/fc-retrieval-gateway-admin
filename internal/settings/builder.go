@@ -71,8 +71,8 @@ func (f *BuilderImpl) Build() *ClientGatewayAdminSettings {
 		if err != nil {
 			log.ErrorAndPanic("Settings: Error while generating random retrieval key pair: %s" + err.Error())
 		}
-		f.gatewayAdminPrivateKey = pKey
-		f.gatewayAdminPrivateKeyVer = fcrcrypto.DecodeKeyVersion(1)
+		g.gatewayAdminPrivateKey = pKey
+		g.gatewayAdminPrivateKeyVer = fcrcrypto.DecodeKeyVersion(1)
 	} else {
 		g.gatewayAdminPrivateKey = f.gatewayAdminPrivateKey
 		g.gatewayAdminPrivateKeyVer = f.gatewayAdminPrivateKeyVer
