@@ -106,7 +106,7 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 
 	// TODO: Persistence the gateway's keys and NodeID locally
 
-	log.Info("Sending message to gateway: %v, message: %v", gatewayNodeID.ToString(), request.GetMessageBody())
+	log.Info("Sending message to gateway: %v, message: \n%s", gatewayNodeID.ToString(), request.DumpMessage())
 
 	// Get conn for the right gateway
 	channel, err := conxPool.GetConnForRequestingNode(gatewayNodeID)
