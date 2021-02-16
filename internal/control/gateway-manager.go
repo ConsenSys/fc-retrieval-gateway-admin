@@ -105,6 +105,9 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 
 	// Get conn for the right gateway
 	channel, err := conxPool.GetConnForRequestingNode(gatewaynodeid)
+	if err != nil {
+		return err
+	}
 	conn := channel.Conn
 	if err != nil {
 		log.Error("Error getting a connection to gateway %v: %s", gatewaynodeid.ToString(), err)
