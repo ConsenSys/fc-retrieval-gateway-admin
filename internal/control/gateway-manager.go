@@ -87,30 +87,35 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 		return err
 	}
 
-	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
-	conxPool := fcrtcpcomms.NewCommunicationPool()
-
-	// TODO: Register the gateway with the connection pool.
-
 	// Get the gateway's NodeID
-	gatewaynodeid, err := nodeid.NewNodeIDFromPublicKey(gatewayKeyPair)
+	gatewayNodeID, err := nodeid.NewNodeIDFromPublicKey(gatewayKeyPair)
 	if err != nil {
 		log.Error("Error getting gateway's NodeID: %s", err)
 		return err
 	}
 
+
+	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
+	conxPool := fcrtcpcomms.NewCommunicationPool()
+	// TODO has gateway domain and port passed in
+	conxPool.RegisterNodeAddress(gatewayNodeID, "gateway:9013")
+
+	// TODO Add gateway to the Register service
+
+
+
 	// TODO: Persistence the gateway's keys and NodeID locally
 
-	log.Info("Sending message to gateway: %v, message: %v", gatewaynodeid.ToString(), request.GetMessageBody())
+	log.Info("Sending message to gateway: %v, message: %v", gatewayNodeID.ToString(), request.GetMessageBody())
 
 	// Get conn for the right gateway
-	channel, err := conxPool.GetConnForRequestingNode(gatewaynodeid)
+	channel, err := conxPool.GetConnForRequestingNode(gatewayNodeID)
 	if err != nil {
 		return err
 	}
 	conn := channel.Conn
 	if err != nil {
-		log.Error("Error getting a connection to gateway %v: %s", gatewaynodeid.ToString(), err)
+		log.Error("Error getting a connection to gateway %v: %s", gatewayNodeID.ToString(), err)
 		return err
 	}
 	err = fcrtcpcomms.SendTCPMessage(conn, request, settings.DefaultTCPInactivityTimeout)
