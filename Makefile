@@ -13,7 +13,7 @@ release: clean utest build
 
 # builds a docker image that builds the app and packages it into a minimal docker image
 build:
-	docker build -t ${REGISTRY}fc-retrieval-gateway-admin:${VERSION} .
+	go build ./...
 
 
 # push the image to an registry
