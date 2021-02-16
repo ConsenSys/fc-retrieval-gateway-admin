@@ -61,16 +61,15 @@ func NewGatewayManager(conf settings.ClientGatewayAdminSettings) *GatewayManager
 
 
 // InitializeGateway initialise a new gateway
-func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayprivatekey *fcrcrypto.KeyPair) error {
+func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair *fcrcrypto.KeyPair) error {
 // TODO check whether gateway not initialized.
 // TODO check whether contract indicates initialised
 
 	// Get gateway key version
-	var gatewaykeyversion *fcrcrypto.KeyVersion
-	gatewaykeyversion = fcrcrypto.InitialKeyVersion() 
+	gatewaykeyversion := fcrcrypto.InitialKeyVersion() 
 	gatewaykeyversionuint := gatewaykeyversion.EncodeKeyVersion()
 	// Get encoded version of the gateway's private key
-	gatewayprivatekeystr := gatewayprivatekey.EncodePrivateKey()
+	gatewayprivatekeystr := gatewayKeyPair.EncodePrivateKey()
 
 	// Make a request message
 	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(gatewayprivatekeystr, gatewaykeyversionuint)
@@ -93,14 +92,8 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayprivatek
 
 	// TODO: Register the gateway with the connection pool.
 
-	// - get the public key of the gateway and its NodeID
-	gatewaypublickey, err := gatewayprivatekey.EncodePublicKey()
-	if err != nil {
-		log.Error("Error encoding gateway's public key: %s", err)
-		return err
-	}
 	// Get the gateway's NodeID
-	gatewaynodeid, err := nodeid.NewNodeIDFromString(gatewaypublickey)
+	gatewaynodeid, err := nodeid.NewNodeIDFromPublicKey(gatewayKeyPair)
 	if err != nil {
 		log.Error("Error getting gateway's NodeID: %s", err)
 		return err
