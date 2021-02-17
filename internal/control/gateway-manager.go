@@ -22,6 +22,7 @@ import (
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrmessages"
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrtcpcomms"
 	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
+	"github.com/ConsenSys/fc-retrieval-gateway/pkg/register"
 
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/contracts"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/gatewayapi"
@@ -43,7 +44,6 @@ type ActiveGateway struct {
 	comms *gatewayapi.Comms
 }
 
-
 // NewGatewayManager returns the single instance of the gateway manager.
 // The settings parameter must be used with the first call to this function.
 // After that, the settings parameter is ignored.
@@ -52,21 +52,18 @@ func NewGatewayManager(conf settings.ClientGatewayAdminSettings) *GatewayManager
 	g.settings = conf
 	g.gatewayRegistrationContract = contracts.GetGatewayRegistrationContract()
 
-
 	// TODO what should be done with error that is returned possibly in the future?
 	// TODO would it be better just to have gatewayManagerRunner panic after emitting a log?
 	return &g
 }
 
-
-
 // InitializeGateway initialise a new gateway
 func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair *fcrcrypto.KeyPair) error {
-// TODO check whether gateway not initialized.
-// TODO check whether contract indicates initialised
+	// TODO check whether gateway not initialized.
+	// TODO check whether contract indicates initialised
 
 	// Get gateway key version
-	gatewaykeyversion := fcrcrypto.InitialKeyVersion() 
+	gatewaykeyversion := fcrcrypto.InitialKeyVersion()
 	gatewaykeyversionuint := gatewaykeyversion.EncodeKeyVersion()
 	// Get encoded version of the gateway's private key
 	gatewayprivatekeystr := gatewayKeyPair.EncodePrivateKey()
@@ -94,22 +91,24 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 		return err
 	}
 
-
 	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
-	conxPool := fcrtcpcomms.NewCommunicationPool()
+	registeredMap := make(map[string]register.RegisteredNode)
+	registeredMap[gatewayNodeID.ToString()] = &register.GatewayRegister{
+		NodeID:             gatewayNodeID.ToString(),
+		NetworkGatewayInfo: "gateway:9013",
+	}
+
+	conxPool := fcrtcpcomms.NewCommunicationPool(registeredMap, &sync.RWMutex{})
 	// TODO has gateway domain and port passed in
-	conxPool.RegisterNodeAddress(gatewayNodeID, "gateway:9013")
 
 	// TODO Add gateway to the Register service
-
-
 
 	// TODO: Persistence the gateway's keys and NodeID locally
 
 	log.Info("Sending message to gateway: %v, message: %s", gatewayNodeID.ToString(), request.DumpMessage())
 
 	// Get conn for the right gateway
-	channel, err := conxPool.GetConnForRequestingNode(gatewayNodeID)
+	channel, err := conxPool.GetConnForRequestingNode(gatewayNodeID, fcrtcpcomms.AccessFromGateway)
 	if err != nil {
 		return err
 	}
