@@ -3,7 +3,7 @@ module github.com/ConsenSys/fc-retrieval-gateway-admin
 go 1.15
 
 require (
-	github.com/ConsenSys/fc-retrieval-gateway v0.0.0-20210217015615-53f1282a2ff7
+	github.com/ConsenSys/fc-retrieval-gateway v0.0.0-20210217043212-e959886bb388
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
