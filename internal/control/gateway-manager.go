@@ -95,7 +95,7 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 	registeredMap := make(map[string]register.RegisteredNode)
 	registeredMap[gatewayNodeID.ToString()] = &register.GatewayRegister{
 		NodeID:             gatewayNodeID.ToString(),
-		NetworkGatewayInfo: "gateway:9013",
+		NetworkInfoGateway: "gateway:9013",
 	}
 
 	conxPool := fcrtcpcomms.NewCommunicationPool(registeredMap, &sync.RWMutex{})
