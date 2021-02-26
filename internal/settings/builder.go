@@ -5,8 +5,8 @@ package settings
 // Filecoin Retrieval Gateway Admin Client Settings
 
 import (
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
-	log "github.com/ConsenSys/fc-retrieval-gateway/pkg/logging"
+	"github.com/ConsenSys/fc-retrieval-common/pkg/fcrcrypto"
+	log "github.com/ConsenSys/fc-retrieval-common/pkg/logging"
 )
 
 // BuilderImpl holds the library configuration

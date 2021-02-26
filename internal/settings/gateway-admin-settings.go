@@ -5,7 +5,7 @@ package settings
 // Filecoin Retrieval Gateway Admin Client Settings
 
 import (
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
+	"github.com/ConsenSys/fc-retrieval-common/pkg/fcrcrypto"
 )
 
 // ClientGatewayAdminSettings holds the library configuration

@@ -18,16 +18,16 @@ package control
 import (
 	"sync"
 
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrcrypto"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrmessages"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/fcrtcpcomms"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/nodeid"
-	"github.com/ConsenSys/fc-retrieval-gateway/pkg/register"
+	"github.com/ConsenSys/fc-retrieval-common/pkg/fcrcrypto"
+	"github.com/ConsenSys/fc-retrieval-common/pkg/fcrmessages"
+	"github.com/ConsenSys/fc-retrieval-common/pkg/fcrtcpcomms"
+	"github.com/ConsenSys/fc-retrieval-common/pkg/nodeid"
+	"github.com/ConsenSys/fc-retrieval-common/pkg/register"
 
+	log "github.com/ConsenSys/fc-retrieval-common/pkg/logging"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/contracts"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/gatewayapi"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/settings"
-	log "github.com/ConsenSys/fc-retrieval-gateway/pkg/logging"
 )
 
 // GatewayManager managers the pool of gateways and the connections to them.
