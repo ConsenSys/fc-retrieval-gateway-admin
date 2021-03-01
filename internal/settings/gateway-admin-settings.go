@@ -16,6 +16,8 @@ type ClientGatewayAdminSettings struct {
 
 	gatewayAdminPrivateKey    *fcrcrypto.KeyPair
 	gatewayAdminPrivateKeyVer *fcrcrypto.KeyVersion
+
+	registerURL string
 }
 
 // EstablishmentTTL returns the establishmentTTL
@@ -36,4 +38,9 @@ func (c ClientGatewayAdminSettings) GatewayAdminPrivateKey() *fcrcrypto.KeyPair 
 // GatewayAdminPrivateKeyVer returns the GatewayAdminKeyVer
 func (c ClientGatewayAdminSettings) GatewayAdminPrivateKeyVer() *fcrcrypto.KeyVersion {
 	return c.gatewayAdminPrivateKeyVer
+}
+
+// RegisterURL is the URL to the register service
+func (c ClientGatewayAdminSettings) RegisterURL() string {
+	return c.registerURL
 }

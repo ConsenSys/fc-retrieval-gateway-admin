@@ -56,7 +56,10 @@ func NewGatewayManager(conf settings.ClientGatewayAdminSettings) *GatewayManager
 }
 
 // InitializeGateway initialise a new gateway
-func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayPort string, gatewayRootKeyPair *fcrcrypto.KeyPair, gatewayRetrievalKeyPair *fcrcrypto.KeyPair) error {
+func (g *GatewayManager) InitializeGateway(
+	gatewayDomain, gatewayGatewayPort, gatewayProviderPort, gatewayClientPort, gatewayAdminPort string, 
+	region string,
+	gatewayRootKeyPair *fcrcrypto.KeyPair, gatewayRetrievalKeyPair *fcrcrypto.KeyPair) error {
 	// TODO check whether gateway not initialized.
 	// TODO check whether contract indicates initialised
 
@@ -91,7 +94,7 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayPort str
 
 	log.Info("Sending message to gateway: %v, message: %s", gatewayNodeID.ToString(), request.DumpMessage())
 
-	conn, err := g.getConnection(gatewayNodeID, gatewayDomain, gatewayPort) //"gateway:9013"
+	conn, err := g.getConnection(gatewayNodeID, gatewayDomain, gatewayAdminPort) //"gateway:9013"
 	if err != nil {
 		return err
 	}
@@ -116,6 +119,30 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayPort str
 		return fmt.Errorf("Key not accepted for unspecified reason")
 	}
 
+
+
+	gatewayRootPubKey, err := gatewayRootKeyPair.EncodePublicKey()
+	if err != nil {
+		return err
+	}
+	gatewayRetrievalPubKey, err := gatewayRetrievalKeyPair.EncodePublicKey()
+	if err != nil {
+		return err
+	}
+
+	// Register Gateway
+	gatewayReg := register.GatewayRegister{
+			NodeID:              gatewayNodeID.ToString(),
+			Address:             gatewayDomain,
+			RootSigningKey:      gatewayRootPubKey,
+			SigningKey:          gatewayRetrievalPubKey,
+			NetworkInfoGateway:  gatewayGatewayPort,
+			NetworkInfoProvider: gatewayProviderPort,
+			NetworkInfoClient:   gatewayClientPort,
+			NetworkInfoAdmin:    gatewayAdminPort,
+			RegionCode:          region,
+		}
+		gatewayReg.RegisterGateway(g.settings.RegisterURL())
 
 	return nil
 }

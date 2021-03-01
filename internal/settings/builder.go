@@ -19,6 +19,7 @@ type BuilderImpl struct {
 
 	gatewayAdminPrivateKey    *fcrcrypto.KeyPair
 	gatewayAdminPrivateKeyVer *fcrcrypto.KeyVersion
+	registerURL string
 }
 
 // CreateSettings creates an object with the default settings.
@@ -52,12 +53,18 @@ func (f *BuilderImpl) SetGatewayAdminPrivateKey(rPkey *fcrcrypto.KeyPair, ver *f
 	f.gatewayAdminPrivateKeyVer = ver
 }
 
+// SetRegisterURL sets the URL of the register service
+func (f *BuilderImpl) SetRegisterURL(regURL string) {
+	f.registerURL = regURL
+}
+
 // Build creates a settings object and initialises the logging system.
 func (f *BuilderImpl) Build() *ClientGatewayAdminSettings {
 	log.Init1(f.logLevel, f.logTarget)
 
 	g := ClientGatewayAdminSettings{}
 	g.establishmentTTL = f.establishmentTTL
+	g.registerURL = f.registerURL
 
 	if f.blockchainPrivateKey == nil {
 		log.ErrorAndPanic("Settings: Blockchain Private Key not set")

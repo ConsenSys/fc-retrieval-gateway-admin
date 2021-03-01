@@ -24,6 +24,9 @@ type SettingsBuilder interface {
 	// SetGatewayAdminPrivateKey sets the retrieval private key.
 	SetGatewayAdminPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion)
 
+	// SetRegisterURL sets the URL of the register service.
+	SetRegisterURL(regURL string)
+
 	// Build creates a settings object and initialises the logging system.
 	Build() *Settings
 }
@@ -36,6 +39,8 @@ type Settings interface {
 
     GatewayAdminPrivateKey() *fcrcrypto.KeyPair
 	GatewayAdminPrivateKeyVer() *fcrcrypto.KeyVersion
+
+	RegisterURL() string
 }
 
 // CreateSettings loads up default settings
@@ -71,6 +76,11 @@ func (f settingsBuilderImpl) SetBlockchainPrivateKey(bcPkey *fcrcrypto.KeyPair) 
 // SetGatewayAdminPrivateKey sets the retrieval private key.
 func (f settingsBuilderImpl) SetGatewayAdminPrivateKey(rPkey *fcrcrypto.KeyPair, ver *fcrcrypto.KeyVersion) {
 	f.impl.SetGatewayAdminPrivateKey(rPkey, ver)
+}
+
+// SetRegisterURL sets the URL to the register service.
+func (f settingsBuilderImpl) SetRegisterURL(regURL string) {
+	f.impl.SetRegisterURL(regURL)
 }
 
 // Build generates the settings.

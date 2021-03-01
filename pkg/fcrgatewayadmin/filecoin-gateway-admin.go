@@ -56,11 +56,28 @@ func CreateKey() (*fcrcrypto.KeyPair, error) {
 	return gatewayPrivateKey, nil
 }
 
+// InitializeGatewayDefaultPorts uses default port values.
+func (c *FilecoinRetrievalGatewayAdminClient) InitializeGatewayDefaultPorts(
+	gatewayDomain string, 
+	region string,
+	gatewayRootKeyPair *fcrcrypto.KeyPair, gatewayRetrievalKeyPair *fcrcrypto.KeyPair) error {
+		return c.InitializeGateway(gatewayDomain, 
+			settings.DefaultGatewayGatewayPort, settings.DefaultGatewayProviderPort, 
+			settings.DefaultGatewayClientPort, settings.DefaultGatewayAdminPort,
+			region, gatewayRootKeyPair, gatewayRetrievalKeyPair)
+}
+
+
 // InitializeGateway sends a private key to a Gateway along with a key version number.
 func (c *FilecoinRetrievalGatewayAdminClient) InitializeGateway(
-	gatewayDomain string, gatewayPort string, gatewayRootKeyPair *fcrcrypto.KeyPair, gatewayRetrievalKeyPair *fcrcrypto.KeyPair) error {
+	gatewayDomain, gatewayGatewayPort, gatewayProviderPort, gatewayClientPort, gatewayAdminPort string, 
+	region string,
+	gatewayRootKeyPair *fcrcrypto.KeyPair, gatewayRetrievalKeyPair *fcrcrypto.KeyPair) error {
 	log.Info("Filecoin Retrieval Gateway Admin Client: InitializeGateway()")
-	return c.gatewayManager.InitializeGateway(gatewayDomain, gatewayPort, gatewayRootKeyPair, gatewayRetrievalKeyPair)
+	return c.gatewayManager.InitializeGateway(gatewayDomain, 
+		gatewayGatewayPort, gatewayProviderPort, gatewayClientPort, gatewayAdminPort, 
+		region,
+		gatewayRootKeyPair, gatewayRetrievalKeyPair)
 }
 
 // ResetClientReputation requests a Gateway to initialise a client's reputation to the default value.
