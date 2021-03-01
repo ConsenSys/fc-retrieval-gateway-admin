@@ -62,8 +62,8 @@ func (c *FilecoinRetrievalGatewayAdminClient) InitializeGateway(gatewayDomain st
 	return c.gatewayManager.InitializeGateway(gatewayDomain, gatewayPrivateKey)
 }
 
-// InitialiseClientReputation requests a Gateway to initialise a client's reputation to the default value.
-func InitialiseClientReputation(clientID *nodeid.NodeID) bool {
+// ResetClientReputation requests a Gateway to initialise a client's reputation to the default value.
+func ResetClientReputation(clientID *nodeid.NodeID) bool {
 	log.Info("Filecoin Retrieval Gateway Admin Client: InitialiseClientReputation(clientID: %s", clientID)
 	// TODO DHW
 	log.Info("InitialiseClientReputation(clientID: %s) failed to initialise reputation.", clientID)

@@ -16,7 +16,9 @@ package control
  */
 
 import (
+	"net"
 	"sync"
+	"time"
 
 	"github.com/ConsenSys/fc-retrieval-common/pkg/fcrcrypto"
 	"github.com/ConsenSys/fc-retrieval-common/pkg/fcrmessages"
@@ -25,7 +27,6 @@ import (
 	"github.com/ConsenSys/fc-retrieval-common/pkg/register"
 
 	log "github.com/ConsenSys/fc-retrieval-common/pkg/logging"
-	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/contracts"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/gatewayapi"
 	"github.com/ConsenSys/fc-retrieval-gateway-admin/internal/settings"
 )
@@ -33,27 +34,23 @@ import (
 // GatewayManager managers the pool of gateways and the connections to them.
 type GatewayManager struct {
 	settings                    settings.ClientGatewayAdminSettings
-	gatewayRegistrationContract *contracts.GatewayRegistrationContract
 	gateway                     ActiveGateway
 	gatewaysLock                sync.RWMutex
+	registeredMap								map[string]register.RegisteredNode
+	conxPool 									  *fcrtcpcomms.CommunicationPool
 }
 
 // ActiveGateway contains information for a single gateway
 type ActiveGateway struct {
-	info  contracts.GatewayInformation
 	comms *gatewayapi.Comms
 }
 
-// NewGatewayManager returns the single instance of the gateway manager.
-// The settings parameter must be used with the first call to this function.
-// After that, the settings parameter is ignored.
+// NewGatewayManager creates a gateway manager.
 func NewGatewayManager(conf settings.ClientGatewayAdminSettings) *GatewayManager {
 	g := GatewayManager{}
 	g.settings = conf
-	g.gatewayRegistrationContract = contracts.GetGatewayRegistrationContract()
-
-	// TODO what should be done with error that is returned possibly in the future?
-	// TODO would it be better just to have gatewayManagerRunner panic after emitting a log?
+	g.registeredMap = make(map[string]register.RegisteredNode)
+	g.conxPool = fcrtcpcomms.NewCommunicationPool(g.registeredMap, &sync.RWMutex{})
 	return &g
 }
 
@@ -91,38 +88,20 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 		return err
 	}
 
-	// TODO Temporary: The ConnectionPool should be a client-wide persistent struct
-	registeredMap := make(map[string]register.RegisteredNode)
-	registeredMap[gatewayNodeID.ToString()] = &register.GatewayRegister{
-		NodeID:             gatewayNodeID.ToString(),
-		NetworkInfoGateway: "gateway:9013",
-	}
-
-	conxPool := fcrtcpcomms.NewCommunicationPool(registeredMap, &sync.RWMutex{})
-	// TODO has gateway domain and port passed in
-
-	// TODO Add gateway to the Register service
-
-	// TODO: Persistence the gateway's keys and NodeID locally
-
 	log.Info("Sending message to gateway: %v, message: %s", gatewayNodeID.ToString(), request.DumpMessage())
 
-	// Get conn for the right gateway
-	channel, err := conxPool.GetConnForRequestingNode(gatewayNodeID, fcrtcpcomms.AccessFromGateway)
+	conn, err := g.getConnection(gatewayKeyPair, "gateway:9013")
 	if err != nil {
-		return err
-	}
-	conn := channel.Conn
-	if err != nil {
-		log.Error("Error getting a connection to gateway %v: %s", gatewayNodeID.ToString(), err)
 		return err
 	}
 	err = fcrtcpcomms.SendTCPMessage(conn, request, settings.DefaultTCPInactivityTimeout)
-
 	if err != nil {
 		log.Error("Error sending private key to Gateway: %s", err)
 		return err
 	}
+
+	response, err := fcrtcpcomms.ReadTCPMessage(conn, time.Second*1)
+	log.Info("Response message: %+v", response)
 
 	// TODO: Receive response from gateway?
 
@@ -144,4 +123,33 @@ func (g *GatewayManager) UnblockGateway(hostName string) {
 // of the graceful library shutdown
 func (g *GatewayManager) Shutdown() {
 	// TODO
+}
+
+
+func (g *GatewayManager) getConnection(gatewayRootPublicKey *fcrcrypto.KeyPair, domainAndPort string) (net.Conn, error) {
+	// Get the gateway's NodeID
+	gatewayNodeID, err := nodeid.NewNodeIDFromPublicKey(gatewayRootPublicKey)
+	if err != nil {
+		log.Error("Error getting gateway's NodeID: %s", err)
+		return nil, err
+	}
+
+	// Add new gateway to the connection pool.
+	g.registeredMap[gatewayNodeID.ToString()] = &register.GatewayRegister{
+		NodeID:             gatewayNodeID.ToString(),
+		NetworkInfoGateway: domainAndPort,
+	}
+
+	// Get conn for the right gateway
+	channel, err := g.conxPool.GetConnForRequestingNode(gatewayNodeID, fcrtcpcomms.AccessFromGateway)
+	if err != nil {
+		return nil, err
+	}
+	conn := channel.Conn
+	if err != nil {
+		log.Error("Error getting a connection to gateway %v: %s", gatewayNodeID.ToString(), err)
+		return nil, err
+	}
+	return conn, nil
+
 }
