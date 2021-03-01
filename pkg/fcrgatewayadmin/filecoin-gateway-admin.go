@@ -57,9 +57,10 @@ func CreateKey() (*fcrcrypto.KeyPair, error) {
 }
 
 // InitializeGateway sends a private key to a Gateway along with a key version number.
-func (c *FilecoinRetrievalGatewayAdminClient) InitializeGateway(gatewayDomain string, gatewayPrivateKey *fcrcrypto.KeyPair) error {
+func (c *FilecoinRetrievalGatewayAdminClient) InitializeGateway(
+	gatewayDomain string, gatewayPort string, gatewayRootKeyPair *fcrcrypto.KeyPair, gatewayRetrievalKeyPair *fcrcrypto.KeyPair) error {
 	log.Info("Filecoin Retrieval Gateway Admin Client: InitializeGateway()")
-	return c.gatewayManager.InitializeGateway(gatewayDomain, gatewayPrivateKey)
+	return c.gatewayManager.InitializeGateway(gatewayDomain, gatewayPort, gatewayRootKeyPair, gatewayRetrievalKeyPair)
 }
 
 // ResetClientReputation requests a Gateway to initialise a client's reputation to the default value.

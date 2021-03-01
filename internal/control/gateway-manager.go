@@ -16,6 +16,7 @@ package control
  */
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -55,18 +56,18 @@ func NewGatewayManager(conf settings.ClientGatewayAdminSettings) *GatewayManager
 }
 
 // InitializeGateway initialise a new gateway
-func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair *fcrcrypto.KeyPair) error {
+func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayPort string, gatewayRootKeyPair *fcrcrypto.KeyPair, gatewayRetrievalKeyPair *fcrcrypto.KeyPair) error {
 	// TODO check whether gateway not initialized.
 	// TODO check whether contract indicates initialised
 
 	// Get gateway key version
-	gatewaykeyversion := fcrcrypto.InitialKeyVersion()
-	gatewaykeyversionuint := gatewaykeyversion.EncodeKeyVersion()
+	gatewayRetrievalKeyVersion := fcrcrypto.InitialKeyVersion()
+	gatewayRetrievalKeyVersionUint := gatewayRetrievalKeyVersion.EncodeKeyVersion()
 	// Get encoded version of the gateway's private key
-	gatewayprivatekeystr := gatewayKeyPair.EncodePrivateKey()
+	gatewayRetrievalPrivateKeyStr := gatewayRetrievalKeyPair.EncodePrivateKey()
 
 	// Make a request message
-	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(gatewayprivatekeystr, gatewaykeyversionuint)
+	request, err := fcrmessages.EncodeAdminAcceptKeyChallenge(gatewayRetrievalPrivateKeyStr, gatewayRetrievalKeyVersionUint)
 	if err != nil {
 		log.Error("Internal error in encoding AdminAcceptKeyChallenge message.")
 		return nil
@@ -82,7 +83,7 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 	}
 
 	// Get the gateway's NodeID
-	gatewayNodeID, err := nodeid.NewNodeIDFromPublicKey(gatewayKeyPair)
+	gatewayNodeID, err := nodeid.NewNodeIDFromPublicKey(gatewayRootKeyPair)
 	if err != nil {
 		log.Error("Error getting gateway's NodeID: %s", err)
 		return err
@@ -90,7 +91,7 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 
 	log.Info("Sending message to gateway: %v, message: %s", gatewayNodeID.ToString(), request.DumpMessage())
 
-	conn, err := g.getConnection(gatewayKeyPair, "gateway:9013")
+	conn, err := g.getConnection(gatewayNodeID, gatewayDomain, gatewayPort) //"gateway:9013"
 	if err != nil {
 		return err
 	}
@@ -100,10 +101,21 @@ func (g *GatewayManager) InitializeGateway(gatewayDomain string, gatewayKeyPair 
 		return err
 	}
 
+	// Process the response from the gateway.
 	response, err := fcrtcpcomms.ReadTCPMessage(conn, time.Second*1)
 	log.Info("Response message: %+v", response)
+	if response.MessageType != fcrmessages.AdminAcceptKeyResponseType {
+		// TODO other types of messages such as protocol version negotiation need to be handled.
+		return fmt.Errorf("Unexpected message in response to set-up Gateway message: %d", response.MessageType)
+	}
+	keyAccepted, err := fcrmessages.DecodeAdminAcceptKeyResponse(response)
+	if err != nil {
+		return err
+	}
+	if !keyAccepted {
+		return fmt.Errorf("Key not accepted for unspecified reason")
+	}
 
-	// TODO: Receive response from gateway?
 
 	return nil
 }
@@ -126,13 +138,8 @@ func (g *GatewayManager) Shutdown() {
 }
 
 
-func (g *GatewayManager) getConnection(gatewayRootPublicKey *fcrcrypto.KeyPair, domainAndPort string) (net.Conn, error) {
-	// Get the gateway's NodeID
-	gatewayNodeID, err := nodeid.NewNodeIDFromPublicKey(gatewayRootPublicKey)
-	if err != nil {
-		log.Error("Error getting gateway's NodeID: %s", err)
-		return nil, err
-	}
+func (g *GatewayManager) getConnection(gatewayNodeID *nodeid.NodeID, domain string, port string) (net.Conn, error) {
+	domainAndPort := domain + ":" + port
 
 	// Add new gateway to the connection pool.
 	g.registeredMap[gatewayNodeID.ToString()] = &register.GatewayRegister{
